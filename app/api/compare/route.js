@@ -43,8 +43,11 @@ export async function POST(req) {
     const q1 = summarize(readExcelFromBuffer(buffer1));
     const q2 = summarize(readExcelFromBuffer(buffer2));
 
+    // Merge all keys to avoid duplicates
+    const allKeys = Array.from(new Set([...Object.keys(q1), ...Object.keys(q2)]));
+
     // Build HTML table
-let html = `
+    let html = `
 <table class="min-w-full border border-gray-300 divide-y divide-gray-200">
   <thead class="bg-blue-500 text-white">
     <tr>
@@ -57,36 +60,23 @@ let html = `
   <tbody class="divide-y divide-gray-200">
 `;
 
-Object.keys(q1).forEach((key) => {
-  const diff = q1[key] - (q2[key] || 0);
-  if (diff !== 0) {
-    html += `
-    <tr class="hover:bg-gray-100">
-      <td class="px-4 py-2">${key}</td>
-      <td class="px-4 py-2">${q1[key]}</td>
-      <td class="px-4 py-2">${q2[key] || 0}</td>
-      <td class="px-4 py-2">${diff}</td>
-    </tr>`;
-  }
-});
+    allKeys.forEach((key) => {
+      const val1 = q1[key] || 0;
+      const val2 = q2[key] || 0;
+      const diff = val1 - val2;
 
-Object.keys(q2).forEach((key) => {
-  if (!q1[key]) {
-    const diff = -q2[key];
-    if (diff !== 0) {
-      html += `
+      if (diff !== 0) {
+        html += `
       <tr class="hover:bg-gray-100">
         <td class="px-4 py-2">${key}</td>
-        <td class="px-4 py-2">0</td>
-        <td class="px-4 py-2">${q2[key]}</td>
+        <td class="px-4 py-2">${val1}</td>
+        <td class="px-4 py-2">${val2}</td>
         <td class="px-4 py-2">${diff}</td>
       </tr>`;
-    }
-  }
-});
+      }
+    });
 
-html += "</tbody></table>";
-
+    html += "</tbody></table>";
 
     return new NextResponse(html, { headers: { "Content-Type": "text/html" } });
   } catch (error) {
